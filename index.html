@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SecretDrop — Buat Pesan Rahasia</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+</head>
+<body class="bg-[#060911] text-slate-100 min-h-screen flex items-center justify-center p-4 relative overflow-x-hidden selection:bg-emerald-400/20 selection:text-emerald-300">
+  <!-- Ambient Glow -->
+  <div class="pointer-events-none fixed -top-40 left-1/2 -translate-x-1/2 w-[540px] h-[320px] rounded-full bg-emerald-500/10 blur-[120px]"></div>
+  <div class="pointer-events-none fixed bottom-0 right-0 w-[360px] h-[280px] rounded-full bg-cyan-500/5 blur-[120px]"></div>
+
+  <main class="relative z-10 w-full max-w-xl bg-slate-900/75 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-black/50">
+    <!-- Top Brand Bar -->
+    <div class="flex items-center justify-between gap-3 mb-6">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400/20 to-cyan-400/10 border border-emerald-400/30 flex items-center justify-center text-emerald-300 font-mono text-sm font-semibold">
+          SD
+        </div>
+        <div>
+          <p class="text-sm font-semibold tracking-tight text-white">SecretDrop</p>
+          <p class="text-[11px] font-mono text-slate-400">AES-256-GCM · ZERO-KNOWLEDGE</p>
+        </div>
+      </div>
+      <span class="text-[11px] font-medium px-3 py-1 rounded-full bg-emerald-400/10 text-emerald-300 border border-emerald-400/20">
+        One-Time Link
+      </span>
+    </div>
+
+    <!-- Title -->
+    <div class="mb-6">
+      <h1 class="text-2xl sm:text-[28px] font-bold tracking-tight text-white leading-snug">
+        Kirim pesan rahasia mu sekarang!!!
+      </h1>
+      <p class="text-sm text-slate-400 mt-2 leading-relaxed">
+        Tulis pesan rahasia dirimu. Pesan dienkripsi di browser dengan AES-256 sebelum dikirim ke server.
+      </p>
+    </div>
+
+    <!-- Form -->
+    <form id="secretForm" class="space-y-5">
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <label for="messageInput" class="text-xs font-semibold uppercase tracking-wider text-slate-300">
+            Pesan Rahasia
+          </label>
+          <span id="charCount" class="text-xs font-mono text-slate-500">0 karakter</span>
+        </div>
+        <textarea
+          id="messageInput"
+          rows="5"
+          required
+          placeholder="Ketik di sini..."
+          class="w-full rounded-2xl bg-slate-950/80 border border-white/10 focus:border-emerald-400/60 focus:ring-4 focus:ring-emerald-400/10 outline-none p-4 text-sm text-slate-100 placeholder-slate-500 transition resize-none leading-relaxed"
+        ></textarea>
+      </div>
+
+      <button
+        id="submitBtn"
+        type="submit"
+        class="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-300 hover:from-emerald-300 hover:to-teal-200 text-slate-950 font-semibold text-sm shadow-lg shadow-emerald-500/15 transition active:scale-[0.99] cursor-pointer disabled:opacity-50"
+      >
+        Buat Tautan Sekali Pakai
+      </button>
+    </form>
+
+    <!-- Generated Link Box -->
+    <div id="resultBox" class="hidden mt-7 pt-6 border-t border-white/10 space-y-3.5">
+      <div class="flex items-start gap-2.5 p-3.5 rounded-2xl bg-amber-400/10 border border-amber-400/20">
+        <span class="text-xs font-mono font-semibold text-amber-300 shrink-0 mt-0.5">[!]</span>
+        <p class="text-xs text-amber-200/90 leading-relaxed">
+          Bagikan tautan ini hanya ke penerima yang dituju. Kunci dekripsi tersimpan di fragment URL (#key) dan tidak pernah dikirim ke server.
+        </p>
+      </div>
+
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        <input
+          id="generatedLink"
+          type="text"
+          readonly
+          class="flex-1 rounded-xl bg-slate-950/90 border border-white/10 px-3.5 py-2.5 text-xs font-mono text-emerald-200 select-all outline-none"
+        />
+        <button
+          id="copyBtn"
+          type="button"
+          class="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/10 text-xs font-semibold text-white transition cursor-pointer shrink-0"
+        >
+          Salin Link
+        </button>
+      </div>
+      <p id="copyFeedback" class="text-xs text-emerald-400 hidden">Tautan berhasil disalin ke clipboard.</p>
+    </div>
+
+    <!-- Footer -->
+    <div class="mt-7 pt-4 border-t border-white/5 flex items-center justify-between text-[11px] font-mono text-slate-500">
+      <span>END-TO-END ENCRYPTED</span>
+      <span>CRYPTOGRAPHY UAS</span>
+    </div>
+  </main>
+
+  <script src="crypto.js"></script>
+  <script>
+    const form = document.getElementById("secretForm");
+    const messageInput = document.getElementById("messageInput");
+    const submitBtn = document.getElementById("submitBtn");
+    const charCount = document.getElementById("charCount");
+    const resultBox = document.getElementById("resultBox");
+    const generatedLink = document.getElementById("generatedLink");
+    const copyBtn = document.getElementById("copyBtn");
+    const copyFeedback = document.getElementById("copyFeedback");
+
+    messageInput.addEventListener("input", () => {
+      charCount.textContent = `${messageInput.value.length} karakter`;
+    });
+
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const plainText = messageInput.value.trim();
+      if (!plainText) return;
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Mengenkripsi & Menyimpan...";
+
+      try {
+        // 1. Enkripsi di sisi browser menggunakan AES-256-GCM
+        const { ciphertext, iv, key } = await CryptoEngine.encryptMessage(plainText);
+
+        // 2. Kirim hanya ciphertext & iv ke Backend (tanpa key!)
+        const response = await fetch("/api/secrets", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ciphertext, iv }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || "Gagal menyimpan pesan ke server");
+        }
+
+        // 3. Susun tautan dengan token di query dan key di URL hash fragment (#key=)
+        const fullLink = `${window.location.origin}/baca.html?token=${data.token}#key=${key}`;
+        generatedLink.value = fullLink;
+
+        messageInput.value = "";
+        charCount.textContent = "0 karakter";
+        resultBox.classList.remove("hidden");
+        copyFeedback.classList.add("hidden");
+        copyBtn.textContent = "Salin Link";
+      } catch (err) {
+        alert("Terjadi kesalahan: " + err.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Buat Tautan Sekali Pakai";
+      }
+    });
+
+    copyBtn.addEventListener("click", async function () {
+      await navigator.clipboard.writeText(generatedLink.value);
+      copyBtn.textContent = "Tersalin";
+      copyFeedback.classList.remove("hidden");
+    });
+  </script>
+</body>
+</html>

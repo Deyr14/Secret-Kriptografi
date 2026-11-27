@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SecretDrop — Baca Pesan Rahasia</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+</head>
+<body class="bg-[#060911] text-slate-100 min-h-screen flex items-center justify-center p-4 relative overflow-x-hidden selection:bg-emerald-400/20 selection:text-emerald-300">
+  <!-- Ambient Glow -->
+  <div class="pointer-events-none fixed -top-40 left-1/2 -translate-x-1/2 w-[540px] h-[320px] rounded-full bg-amber-500/10 blur-[120px]"></div>
+
+  <main class="relative z-10 w-full max-w-xl bg-slate-900/75 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-black/50">
+    <!-- Top Bar -->
+    <div class="flex items-center justify-between gap-3 mb-6">
+      <a href="index.html" class="flex items-center gap-2.5 group">
+        <div class="w-9 h-9 rounded-xl bg-white/5 group-hover:bg-white/10 border border-white/10 flex items-center justify-center text-slate-200 font-mono text-sm font-semibold transition">
+          SD
+        </div>
+        <div>
+          <p class="text-sm font-semibold tracking-tight text-white">SecretDrop</p>
+          <p class="text-[11px] font-mono text-slate-400">SELF-DESTRUCT VIEWER</p>
+        </div>
+      </a>
+      <span class="text-[11px] font-medium px-3 py-1 rounded-full bg-amber-400/10 text-amber-300 border border-amber-400/20">
+        Single Read
+      </span>
+    </div>
+
+    <!-- Header -->
+    <div class="mb-6">
+      <h1 class="text-2xl sm:text-[28px] font-bold tracking-tight text-white leading-snug">
+        Pesan rahasia siap dibuka.
+      </h1>
+      <p class="text-sm text-slate-400 mt-2 leading-relaxed">
+        Begitu kamu menekan tombol buka, pesan akan ditampilkan dan langsung dihapus permanen dari database server.
+      </p>
+    </div>
+
+    <!-- State 1: Konfirmasi -->
+    <div id="confirmBox" class="space-y-4">
+      <div class="p-4 rounded-2xl bg-amber-400/10 border border-amber-400/20 text-xs text-amber-200/90 leading-relaxed">
+        Pastikan kamu sudah siap membaca dan menyalin isi pesan. Link tidak dapat dibuka ulang setelah tombol ditekan.
+      </div>
+      <button
+        id="revealBtn"
+        type="button"
+        class="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-300 hover:from-emerald-300 hover:to-teal-200 text-slate-950 font-semibold text-sm shadow-lg shadow-emerald-500/15 transition active:scale-[0.99] cursor-pointer disabled:opacity-50"
+      >
+        Buka & Hancurkan Pesan
+      </button>
+    </div>
+
+    <!-- State 2: Isi Pesan -->
+    <div id="messageBox" class="hidden space-y-4">
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-xs font-medium text-emerald-400">Pesan terbuka · Data di server telah musnah</span>
+        <button
+          id="copySecretBtn"
+          type="button"
+          class="px-3.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/10 text-xs font-medium text-white transition cursor-pointer"
+        >
+          Salin Isi
+        </button>
+      </div>
+      <pre
+        id="secretContent"
+        class="w-full rounded-2xl bg-slate-950/90 border border-white/10 p-4 text-sm text-slate-100 whitespace-pre-wrap break-words font-sans leading-relaxed"
+      ></pre>
+      <p id="copiedSecretMsg" class="text-xs text-emerald-400 hidden">Isi pesan berhasil disalin.</p>
+      <div class="pt-2">
+        <a
+          href="index.html"
+          class="inline-flex items-center text-xs font-medium text-slate-300 hover:text-white underline underline-offset-4"
+        >
+          Buat pesan rahasia baru
+        </a>
+      </div>
+    </div>
+
+    <!-- State 3: Tidak Valid / Sudah Musnah -->
+    <div id="errorBox" class="hidden space-y-4">
+      <div class="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-sm text-rose-200 leading-relaxed">
+        Pesan tidak ditemukan, sudah pernah dibaca dan dihancurkan, atau kunci dekripsi pada tautan tidak valid.
+      </div>
+      <a
+        href="index.html"
+        class="inline-flex items-center justify-center py-2.5 px-4 rounded-xl bg-white/10 hover:bg-white/15 border border-white/10 text-xs font-semibold text-white transition"
+      >
+        Kembali ke Halaman Utama
+      </a>
+    </div>
+  </main>
+
+  <script src="crypto.js"></script>
+  <script>
+    const confirmBox = document.getElementById("confirmBox");
+    const revealBtn = document.getElementById("revealBtn");
+    const messageBox = document.getElementById("messageBox");
+    const errorBox = document.getElementById("errorBox");
+    const secretContent = document.getElementById("secretContent");
+    const copySecretBtn = document.getElementById("copySecretBtn");
+    const copiedSecretMsg = document.getElementById("copiedSecretMsg");
+
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const secretKey = hashParams.get("key");
+
+    revealBtn.addEventListener("click", async function () {
+      if (!token || !secretKey) {
+        confirmBox.classList.add("hidden");
+        errorBox.classList.remove("hidden");
+        return;
+      }
+
+      revealBtn.disabled = true;
+      revealBtn.textContent = "Mengambil & Mendekripsi...";
+
+      try {
+        // 1. Ambil ciphertext & iv dari backend (otomatis terhapus di SQLite saat dipanggil)
+        const response = await fetch(`/api/secrets/${encodeURIComponent(token)}`);
+        if (!response.ok) {
+          throw new Error("Pesan sudah musnah atau tidak valid");
+        }
+
+        const data = await response.json();
+
+        // 2. Dekripsi di browser menggunakan key dari URL fragment (#key=)
+        const plainText = await CryptoEngine.decryptMessage(
+          data.ciphertext,
+          data.iv,
+          secretKey
+        );
+
+        confirmBox.classList.add("hidden");
+        secretContent.textContent = plainText;
+        messageBox.classList.remove("hidden");
+      } catch (err) {
+        confirmBox.classList.add("hidden");
+        errorBox.classList.remove("hidden");
+      } finally {
+        revealBtn.disabled = false;
+        revealBtn.textContent = "Buka & Hancurkan Pesan";
+      }
+    });
+
+    copySecretBtn.addEventListener("click", async function () {
+      await navigator.clipboard.writeText(secretContent.textContent);
+      copySecretBtn.textContent = "Tersalin";
+      copiedSecretMsg.classList.remove("hidden");
+    });
+  </script>
+</body>
+</html>
